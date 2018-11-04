@@ -74,7 +74,7 @@ private:
 
 private:
 	node<T>* root = nullptr;
-	std::vector<std::vector<std::tuple<bool,size_t, T>>> line_word_lr_witdh_data;
+	std::vector<std::vector<std::tuple<bool,size_t, T>>> line_word_lr_width_data;
 };
 
 template <typename T>
@@ -235,12 +235,12 @@ void tree<T>::print_impl(node<T>* tr, size_t &i, size_t &j, bool left)
 {
 	if (tr != nullptr)
 	{
-		while(line_word_lr_witdh_data.size() < i + 1)
+		while(line_word_lr_width_data.size() < i + 1)
 		{
 			std::vector<std::tuple<bool,size_t, T>> vt;
-			line_word_lr_witdh_data.push_back(vt);
+			line_word_lr_width_data.push_back(vt);
 		}
-		line_word_lr_witdh_data[i].push_back(std::tuple<bool,size_t, T>(left, j, tr->data));
+		line_word_lr_width_data[i].push_back(std::tuple<bool,size_t, T>(left, j, tr->data));
 		auto temp = j;
 		++i;
 		print_impl(tr->left, i, j,true);
@@ -254,7 +254,7 @@ void tree<T>::print_impl(node<T>* tr, size_t &i, size_t &j, bool left)
 template<typename T>
 std::ostream& tree<T>::print(std::ostream &os, bool show_pos)
 {
-	line_word_lr_witdh_data.clear();
+	line_word_lr_width_data.clear();
 	size_t x = 0, y = 0;
 	print_impl(root, x, y);
 	size_t width = static_cast<size_t>(pow(2, depth(root)));
@@ -263,9 +263,9 @@ std::ostream& tree<T>::print(std::ostream &os, bool show_pos)
 	if (show_pos)
 	{
 		os << "depth: " << depth(root) << " data width: " << data_width << std::endl;
-		for (size_t i = 0; i != line_word_lr_witdh_data.size(); ++i)
+		for (size_t i = 0; i != line_word_lr_width_data.size(); ++i)
 		{
-			for (auto &j : line_word_lr_witdh_data[i])
+			for (auto &j : line_word_lr_width_data[i])
 			{
 				os << '(' << std::get<1>(j) + width / static_cast<size_t>(pow(2, i + 1)) << ')' << std::get<2>(j) << ' ';
 			}
@@ -278,7 +278,7 @@ std::ostream& tree<T>::print(std::ostream &os, bool show_pos)
 		os << '-';
 	}
 	os << std::endl;
-	for (size_t i = 0; i != line_word_lr_witdh_data.size(); ++i)
+	for (size_t i = 0; i != line_word_lr_width_data.size(); ++i)
 	{
 		const size_t pos = width / static_cast<size_t>(pow(2, i + 1));
 		if (i > 0)
@@ -287,18 +287,18 @@ std::ostream& tree<T>::print(std::ostream &os, bool show_pos)
 			{
 				os << std::setw(data_width) << " ";
 			}
-			for (size_t j = 0; j != line_word_lr_witdh_data[i].size(); ++j)
+			for (size_t j = 0; j != line_word_lr_width_data[i].size(); ++j)
 			{
 				size_t a;
 				if (j == 0)
 					a = 0;
 				else
-					a = std::get<1>(line_word_lr_witdh_data[i][j - 1]) + 1;
-				for (; a < std::get<1>(line_word_lr_witdh_data[i][j]); ++a)
+					a = std::get<1>(line_word_lr_width_data[i][j - 1]) + 1;
+				for (; a < std::get<1>(line_word_lr_width_data[i][j]); ++a)
 				{
 					os << std::setw(data_width) << " ";
 				}
-				if (std::get<0>(line_word_lr_witdh_data[i][j]))
+				if (std::get<0>(line_word_lr_width_data[i][j]))
 					os << std::setw(data_width) << std::left << '/';
 				else
 					os << std::setw(data_width) << std::left << '\\';
@@ -309,18 +309,18 @@ std::ostream& tree<T>::print(std::ostream &os, bool show_pos)
 		{
 			os << std::setw(data_width) << " ";
 		}
-		for (size_t j = 0; j != line_word_lr_witdh_data[i].size(); ++j)
+		for (size_t j = 0; j != line_word_lr_width_data[i].size(); ++j)
 		{
 			size_t a;
 			if (j == 0)
 				a = 0;
 			else
-				a = std::get<1>(line_word_lr_witdh_data[i][j - 1]) + 1;
-			for (; a < std::get<1>(line_word_lr_witdh_data[i][j]); ++a)
+				a = std::get<1>(line_word_lr_width_data[i][j - 1]) + 1;
+			for (; a < std::get<1>(line_word_lr_width_data[i][j]); ++a)
 			{
 				os << std::setw(data_width) << " ";
 			}
-			os << std::setw(data_width) << std::left << std::get<2>(line_word_lr_witdh_data[i][j]);
+			os << std::setw(data_width) << std::left << std::get<2>(line_word_lr_width_data[i][j]);
 		}
 		os << std::endl;
 	}
