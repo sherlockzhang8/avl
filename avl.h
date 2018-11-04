@@ -14,108 +14,97 @@
 #include<iomanip>
 #include<tuple>
 
-template<typename T> class node;
-
 template<typename T> class tree;
 
 template<typename T>
 class node
 {
 	friend class tree<T>;
-private:
-	T data;
-	int length = 0;
-	node* left = nullptr;
-	node* right = nullptr;
 public:
 	node() = default;
 	node(T &&dt) : data(std::forward<T>(dt)) {}
 	node(const T& dt) : data(dt) {}
+	~node();
+
 	const T & get() const & { return data; }
 	T && get() && { return std::move(data); }
 	void set(T&& dt) { data = std::forward<T>(data); }
-	int len() { return length; }
+	
+private:
+	T data;
+	node* left = nullptr;
+	node* right = nullptr;
 };
+
+template <typename T>
+node<T>::~node()
+{
+	delete left;
+	delete right;
+}
 
 template<typename T>
 class tree
 {
 public:
 	tree() = default;
-	tree(const T& t) :root(new node<T>(t)) {}
-	tree(T &&dt) : root(new node<T>(std::forward<T>(dt))) {};
+	tree(const T& t) = delete;
+	~tree();
 	void insert(const T&);
 	void remove(node<T> *&nd);
-	node<T>*& search(const T&);
-	void pretrav(std::function<void(const T&)> = nullptr);
-	void intrav(std::function<void(const T&)> = nullptr);
-	void foltrav(std::function<void(const T&)> = nullptr);
-	std::ostream& out(std::ostream & = std::cout, const size_t& = 1, const bool& = true);
+	node<T>* search(const T&);
+	void preorder(std::function<void(const T&)> = nullptr);
+	void inorder(std::function<void(const T&)> = nullptr);
+	void postorder(std::function<void(const T&)> = nullptr);
+	std::ostream& print(std::ostream & os = std::cout, bool show_pos = false);
 
 private:
-	void insert(node<T> *&, const T&);
-	void remove(node<T>*&, node<T>*&);
-	void out(node<T>* tr, size_t&, size_t&, bool = true);
-	void pretrav(node<T>* tr, std::function<void(const T&)> = nullptr);
-	void intrav(node<T>* tr, std::function<void(const T&)> = nullptr);
-	void foltrav(node<T>* tr, std::function<void(const T&)> = nullptr);
+	void insert_impl(node<T> *&, const T&);
+	void print_impl(node<T>* tr, size_t&, size_t&, bool = true);
+	node<T>* search_impl(node<T>* tr,const T&);
+	void preorder_impl(node<T>* tr, std::function<void(const T&)> = nullptr);
+	void inorder_impl(node<T>* tr, std::function<void(const T&)> = nullptr);
+	void postorder_impl(node<T>* tr, std::function<void(const T&)> = nullptr);
 	node<T>* rotate_ll(node<T> *);
 	node<T>* rotate_lr(node<T> *);
 	node<T>* rotate_rl(node<T> *);
 	node<T>* rotate_rr(node<T> *);
+	int depth(node<T> *);
+	size_t max_width(node<T> *);
+
+private:
 	node<T>* root = nullptr;
-	void callen(node<T> *&);
-	std::vector < std::vector<std::tuple<bool,size_t, T>>> vd;
+	std::vector<std::vector<std::tuple<bool,size_t, T>>> line_word_lr_witdh_data;
 };
 
-//inline function
-
-template<typename T>
-inline void tree<T>::insert(const T& t)
+template <typename T>
+tree<T>::~tree()
 {
-	insert(root, t);
+	remove(root); 
 }
 
 template<typename T>
-inline void tree<T>::remove(node<T> *&nd)
+void tree<T>::insert(const T& t)
 {
-	remove(root, nd);
-	callen(root);
+	insert_impl(root, t);
 }
 
 template<typename T>
-inline void tree<T>::pretrav(std::function<void(const T&)> f)
+void tree<T>::remove(node<T> *&nd)
 {
-	pretrav(root, f);
+	delete nd;
+	nd = nullptr;
 }
 
 template<typename T>
-inline void tree<T>::intrav(std::function<void(const T&)> f)
-{
-	intrav(root, f);
-}
-
-template<typename T>
-inline void tree<T>::foltrav(std::function<void(const T&)> f)
-{
-	foltrav(root, f);
-}
-
-template<typename T>
-inline int length_of(node<T> * nd)
-{
-	return (nd == nullptr) ? 0 : nd->len();
-}
-
-template<typename T>
-void tree<T>::insert(node<T> *&tr, const T & t)
+void tree<T>::insert_impl(node<T> *&tr, const T & t)
 {
 	if (tr == nullptr)
 		tr = new node<T>(t);
 	else if (t < tr->data)
 	{
-		insert(tr->left, t );
-		if (length_of(tr->left) - length_of(tr->right) > 1)
+		insert_impl(tr->left, t );
+		if (depth(tr->left) - depth(tr->right) > 1)
 			if (t < tr->left->data)
 				tr = rotate_ll(tr);
 			else
@@ -123,122 +112,88 @@ void tree<T>::insert(node<T> *&tr, const T & t)
 	}
 	else
 	{
-		insert(tr->right, t);
-		if (length_of(tr->right) - length_of(tr->left) > 1)
+		insert_impl(tr->right, t);
+		if (depth(tr->right) - depth(tr->left) > 1)
 			if (t < tr->right->data)
 				tr = rotate_rl(tr);
 			else
 				tr = rotate_rr(tr);
 	}
-	tr->length = std::max(length_of(tr->left), length_of(tr->right)) + 1;
 }
 
 template<typename T>
-void tree<T>::remove(node<T> *&tr, node<T> *&nd)
+node<T> *tree<T>::search(const T& t)
 {
-	if (tr == nullptr)
-		throw std::runtime_error("tree error");
-	if (nd == tr)
-	{
-		node<T>* temp;
-		if (nd->left == nullptr)
-		{
-			temp = nd;
-			nd = nd->right;
-			delete temp;
-		}
-		else if (nd->right == nullptr)
-		{
-			temp = nd;
-			nd = nd->left;
-			delete temp;
-		}
-		else
-		{
-			for (temp = nd->left; temp->right != nullptr; temp = temp->right)
-				continue;
-			temp->right = nd->right;
-			temp->length = std::max(length_of(temp->left), length_of(temp->right)) + 1;
-			temp = nd;
-			nd = nd->left;
-			delete temp;
-		}
-		tr = nd;
-	}
-	else
-	{
-		if (nd->data < tr->data)
-		{
-			remove(tr->left, nd);
-		}
-		else
-		{
-			remove(tr->right, nd);
-		}
-	}
+	return search_impl(root, t);
 }
 
 template<typename T>
-node<T> *&tree<T>::search(const T& t)
+node<T>* tree<T>::search_impl(node<T>* tr,const T& t)
 {
-	if (root->data == t)
-		return root;
-	auto temp = root;
-	while (temp != nullptr)
+	if (!tr || tr->data == t)
 	{
-		if (t < temp->data)
-		{
-			if (t == temp->left->data)
-				return temp->left;
-			else
-				temp = temp->left;
-		}
-		else
-		{
-			if (t == temp->right->data)
-				return temp->right;
-			else
-				temp = temp->right;
-		}
+		return tr;
 	}
-	throw std::runtime_error("can't find node");
+
+	if(t < tr->data)
+	{
+		return search_impl(tr->left, t);
+	}
+	return search_impl(tr->right, t);
+}
+template<typename T>
+void tree<T>::preorder(std::function<void(const T&)> f)
+{
+	preorder_impl(root, f);
 }
 
 template<typename T>
-void tree<T>::pretrav(node<T>* tr, std::function<void(const T& t)> f)
+void tree<T>::inorder(std::function<void(const T&)> f)
+{
+	inorder_impl(root, f);
+}
+
+template<typename T>
+void tree<T>::postorder(std::function<void(const T&)> f)
+{
+	postorder_impl(root, f);
+}
+
+template<typename T>
+void tree<T>::preorder_impl(node<T>* tr, std::function<void(const T& t)> f)
 {
 	if (f == nullptr)
 		f = [](const T& t) {std::cout << t << " "; };
 	if (tr != nullptr)
 	{
 		f(tr->data);
-		pretrav(tr->left);
-		pretrav(tr->right);
+		preorder_impl(tr->left);
+		preorder_impl(tr->right);
 	}
 }
 
 template<typename T>
-void tree<T>::intrav(node<T>* tr, std::function<void(const T& t)> f)
+void tree<T>::inorder_impl(node<T>* tr, std::function<void(const T& t)> f)
 {
 	if (f == nullptr)
 		f = [](const T& t) {std::cout << t << " "; };
 	if (tr != nullptr)
 	{
-		intrav(tr->left);
+		inorder_impl(tr->left);
 		f(tr->data);
-		intrav(tr->right);
+		inorder_impl(tr->right);
 	}
 }
 
 template<typename T>
-void tree<T>::foltrav(node<T>* tr, std::function<void(const T& t)> f)
+void tree<T>::postorder_impl(node<T>* tr, std::function<void(const T& t)> f)
 {
 	if (f == nullptr)
 		f = [](const T& t) {std::cout << t << " "; };
 	if (tr != nullptr)
 	{
-		foltrav(tr->left);
-		foltrav(tr->right);
+		postorder_impl(tr->left);
+		postorder_impl(tr->right);
 		f(tr->data);
 	}
 }
@@ -249,8 +204,6 @@ node<T>* tree<T>::rotate_ll(node<T>* nd)
 	auto tr = nd->left;
 	nd->left = tr->right;
 	tr->right = nd;
-	nd->length = std::max(length_of(nd->left), length_of(nd->right)) + 1;
-	tr->length = std::max(length_of(tr->left), nd->length) + 1;
 	return tr;
 }
 
@@ -260,8 +213,6 @@ node<T>* tree<T>::rotate_rr(node<T>* nd)
 	auto tr = nd->right;
 	nd->right = tr->left;
 	tr->left = nd;
-	nd->length = std::max(length_of(nd->left), length_of(nd->right)) + 1;
-	tr->length = std::max(length_of(tr->right), nd->length) + 1;
 	return tr;
 }
 
@@ -280,71 +231,74 @@ node<T>* tree<T>::rotate_rl(node<T>* nd)
 }
 
 template<typename T>
-void tree<T>::out(node<T>* tr, size_t &i, size_t &j, bool left)
+void tree<T>::print_impl(node<T>* tr, size_t &i, size_t &j, bool left)
 {
 	if (tr != nullptr)
 	{
-		while(vd.size() < i + 1)
+		while(line_word_lr_witdh_data.size() < i + 1)
 		{
 			std::vector<std::tuple<bool,size_t, T>> vt;
-			vd.push_back(vt);
+			line_word_lr_witdh_data.push_back(vt);
 		}
-		vd[i].push_back(std::tuple<bool,size_t, T>(left, j, tr->data));
+		line_word_lr_witdh_data[i].push_back(std::tuple<bool,size_t, T>(left, j, tr->data));
 		auto temp = j;
 		++i;
-		out(tr->left, i, j,true);
+		print_impl(tr->left, i, j,true);
 		++i;
-		j = temp + size_t(pow(2, length_of(root) - i));
-		out(tr->right, i, j,false);
+		j = temp + static_cast<size_t>(pow(2, depth(root) - i));
+		print_impl(tr->right, i, j,false);
 	}
 	--i;
 }
 
 template<typename T>
-std::ostream& tree<T>::out(std::ostream &os, const size_t& data_width, const bool& dtl)
+std::ostream& tree<T>::print(std::ostream &os, bool show_pos)
 {
-	size_t i = 0, j = 0;
-	vd.clear();
-	out(root, i, j);
-	size_t width = size_t(pow(2, length_of(root)));
-	if (dtl)
+	line_word_lr_witdh_data.clear();
+	size_t x = 0, y = 0;
+	print_impl(root, x, y);
+	size_t width = static_cast<size_t>(pow(2, depth(root)));
+	size_t data_width = max_width(root);
+
+	if (show_pos)
 	{
-		os << "height: " << length_of(root) << std::endl;
-		for (size_t i = 0; i != vd.size(); ++i)
+		os << "depth: " << depth(root) << " data width: " << data_width << std::endl;
+		for (size_t i = 0; i != line_word_lr_witdh_data.size(); ++i)
 		{
-			for (auto &j : vd[i])
+			for (auto &j : line_word_lr_witdh_data[i])
 			{
-				os << '(' << std::get<0>(j) + width / size_t(pow(2, i + 1)) << ')' <<std::get<1>(j) << ' ';
+				os << '(' << std::get<1>(j) + width / static_cast<size_t>(pow(2, i + 1)) << ')' << std::get<2>(j) << ' ';
 			}
 			os << std::endl;
 		}
 	}
-	for (auto a = 0; a != width * data_width + 1; ++a)
+
+	for (auto a = 0u; a != width * data_width + 1; ++a)
 	{
 		os << '-';
 	}
 	os << std::endl;
-	for (size_t i = 0; i != vd.size(); ++i)
+	for (size_t i = 0; i != line_word_lr_witdh_data.size(); ++i)
 	{
-		const size_t pos = width / size_t(pow(2, i + 1));
+		const size_t pos = width / static_cast<size_t>(pow(2, i + 1));
 		if (i > 0)
 		{
 			for (size_t a = 0; a != pos; ++a)
 			{
 				os << std::setw(data_width) << " ";
 			}
-			for (size_t j = 0; j != vd[i].size(); ++j)
+			for (size_t j = 0; j != line_word_lr_witdh_data[i].size(); ++j)
 			{
 				size_t a;
 				if (j == 0)
 					a = 0;
 				else
-					a = std::get<1>(vd[i][j - 1]) + 1;
-				for (; a < std::get<1>(vd[i][j]); ++a)
+					a = std::get<1>(line_word_lr_witdh_data[i][j - 1]) + 1;
+				for (; a < std::get<1>(line_word_lr_witdh_data[i][j]); ++a)
 				{
 					os << std::setw(data_width) << " ";
 				}
-				if (std::get<0>(vd[i][j]))
+				if (std::get<0>(line_word_lr_witdh_data[i][j]))
 					os << std::setw(data_width) << std::left << '/';
 				else
 					os << std::setw(data_width) << std::left << '\\';
@@ -355,22 +309,22 @@ std::ostream& tree<T>::out(std::ostream &os, const size_t& data_width, const boo
 		{
 			os << std::setw(data_width) << " ";
 		}
-		for (size_t j = 0; j != vd[i].size(); ++j)
+		for (size_t j = 0; j != line_word_lr_witdh_data[i].size(); ++j)
 		{
 			size_t a;
 			if (j == 0)
 				a = 0;
 			else
-				a = std::get<1>(vd[i][j - 1]) + 1;
-			for (; a < std::get<1>(vd[i][j]); ++a)
+				a = std::get<1>(line_word_lr_witdh_data[i][j - 1]) + 1;
+			for (; a < std::get<1>(line_word_lr_witdh_data[i][j]); ++a)
 			{
 				os << std::setw(data_width) << " ";
 			}
-			os << std::setw(data_width) << std::left << std::get<2>(vd[i][j]);
+			os << std::setw(data_width) << std::left << std::get<2>(line_word_lr_witdh_data[i][j]);
 		}
 		os << std::endl;
 	}
-	for (auto a = 0; a != width * data_width + 1; ++a)
+	for (auto a = 0u; a != width * data_width + 1; ++a)
 	{
 		os << '-';
 	}
@@ -379,14 +333,26 @@ std::ostream& tree<T>::out(std::ostream &os, const size_t& data_width, const boo
 }
 
 template<typename T>
-void tree<T>::callen(node<T> *&tr)
+int tree<T>::depth(node<T> *nd)
 {
-	if (tr != nullptr)
+	if(!nd)
 	{
-		callen(tr->left);
-		callen(tr->right);
-		tr->length = std::max(length_of(tr->left), length_of(tr->right)) + 1;
+		return 0;
 	}
+	return std::max(depth(nd->left), depth(nd->right)) + 1;
+}
+
+template<typename T>
+size_t tree<T>::max_width(node<T> *nd)
+{
+	if(!nd)
+	{
+		return 0;
+	}
+
+	std::ostringstream oss;
+	oss << nd->data;
+	return std::max({oss.str().size(), max_width(nd->left), max_width(nd->right)});
 }
 
 #endif

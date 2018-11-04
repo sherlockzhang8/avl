@@ -9,6 +9,9 @@
 
 int main(void)
 {
+	using elem_type = char;
+
+	std::ofstream file("out.txt");
 	do
 	{
 		std::cout << "Characters: " << std::endl;
@@ -20,14 +23,23 @@ int main(void)
 		getline(std::cin, s);
 
 		std::istringstream is(s);
-		char c;
-		tree <char> tr;
+		elem_type e;
+		tree <elem_type> tr;
 
-		while (is >> c)
+		while (is >> e)
 		{
-			tr.insert(c);
+			tr.insert(e);
 		}
-		tr.out(std::cout, 2, false);
+
+		tr.print(file, true);
+		file << std::endl;
+
+		tr.preorder();
+		std::cout << std::endl;
+		tr.inorder();
+		std::cout << std::endl;
+		tr.postorder();
+		std::cout << std::endl;
 
 		std::cout << "Press Enter to continue, others to exit." << std::endl;
 	} while (std::cin.get() == '\n');
